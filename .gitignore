@@ -1,0 +1,6 @@
+scraper.log
+.claude/
+__pycache__/
+*.pyc
+.env
+.vercel

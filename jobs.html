@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Job Board — Founder's Office · CoS · Growth · Strategy</title>
+  <style>
+    :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3248;--accent:#6c63ff;--accent2:#00d4aa;--accent3:#ff6b6b;--accent4:#ffa94d;--text:#e8eaf6;--muted:#8b92b8;--tag-bg:#1e2235;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;}
+    header{background:linear-gradient(135deg,#1a1d27 0%,#12142a 100%);border-bottom:1px solid var(--border);padding:24px 40px;position:sticky;top:0;z-index:100;}
+    .header-inner{max-width:1300px;margin:0 auto;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+    .logo{font-size:22px;font-weight:700;letter-spacing:-0.5px;}.logo span{color:var(--accent);}
+    .stats-bar{display:flex;gap:24px;margin-left:auto;}
+    .stat{text-align:center;}.stat-n{font-size:22px;font-weight:700;color:var(--accent2);}.stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+    .hero{background:linear-gradient(135deg,#1a1d27 0%,#0d0f1e 60%,#12142a 100%);padding:50px 40px 40px;border-bottom:1px solid var(--border);}
+    .hero-inner{max-width:1300px;margin:0 auto;}
+    .hero h1{font-size:36px;font-weight:800;letter-spacing:-1px;line-height:1.2;}.hero h1 em{font-style:normal;color:var(--accent);}
+    .hero p{color:var(--muted);margin-top:10px;font-size:14px;}
+    .pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+    .pill{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:13px;}
+    .filters-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 40px;position:sticky;top:73px;z-index:90;}
+    .filters-inner{max-width:1300px;margin:0 auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+    .search-box{flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s;}.search-box:focus{border-color:var(--accent);}
+    .filter-btn{padding:8px 15px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .filter-btn:hover,.filter-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .results-count{margin-left:auto;color:var(--muted);font-size:13px;white-space:nowrap;}
+    .grid-wrap{max-width:1300px;margin:0 auto;padding:28px 40px 60px;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px 24px;transition:all .2s;text-decoration:none;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden;color:var(--text);}
+    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0;}
+    .card.founders::before{background:var(--accent);}.card.cos::before{background:var(--accent2);}.card.growth::before{background:var(--accent4);}.card.strategy::before{background:var(--accent3);}
+    .card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 32px rgba(108,99,255,.15);}
+    .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+    .company-logo{width:40px;height:40px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+    .card-meta{flex:1;min-width:0;}.card-role{font-size:15px;font-weight:600;line-height:1.35;margin-bottom:3px;}.card-company{font-size:13px;color:var(--muted);}
+    .badge-new{background:rgba(0,212,170,.15);color:var(--accent2);border:1px solid rgba(0,212,170,.3);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0;}
+    .badge-hot{background:rgba(255,107,107,.15);color:var(--accent3);border:1px solid rgba(255,107,107,.3);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0;}
+    .card-info{display:flex;flex-wrap:wrap;gap:8px;}
+    .chip{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);background:var(--tag-bg);border-radius:6px;padding:4px 10px;}
+    .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;}.dot.g{background:var(--accent2);}.dot.o{background:var(--accent4);}
+    .card-tags{display:flex;flex-wrap:wrap;gap:6px;}
+    .tag{font-size:11px;border-radius:5px;padding:3px 8px;font-weight:500;}
+    .tag.d2c{background:rgba(255,169,77,.15);color:var(--accent4);}.tag.startup{background:rgba(108,99,255,.15);color:var(--accent);}.tag.mnc{background:rgba(255,107,107,.1);color:var(--accent3);}.tag.growth{background:rgba(255,169,77,.12);color:var(--accent4);}.tag.strategy{background:rgba(255,107,107,.1);color:#ff9f9f;}
+    .card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:8px;border-top:1px solid var(--border);}
+    .posted-time{font-size:12px;color:var(--muted);}
+    .apply-btn{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;}
+    .empty{text-align:center;padding:80px 20px;color:var(--muted);grid-column:1/-1;}.empty h3{font-size:20px;margin-bottom:8px;color:var(--text);}
+    .source-badge{font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--muted);}
+    .expiry-badge{font-size:11px;border-radius:5px;padding:3px 8px;font-weight:600;white-space:nowrap;}
+    .expiry-badge.expired{background:rgba(255,107,107,.15);color:var(--accent3);border:1px solid rgba(255,107,107,.3);}
+    .expiry-badge.urgent{background:rgba(255,107,107,.2);color:#ff4d4d;border:1px solid rgba(255,77,77,.4);}
+    .expiry-badge.warning{background:rgba(255,169,77,.15);color:var(--accent4);border:1px solid rgba(255,169,77,.3);}
+    .expiry-badge.soon{background:rgba(255,220,100,.1);color:#ffd700;border:1px solid rgba(255,215,0,.25);}
+    .expiry-badge.safe{background:rgba(0,212,170,.1);color:var(--accent2);border:1px solid rgba(0,212,170,.25);}
+    ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+    @media(max-width:768px){header,.hero,.filters-bar,.grid-wrap{padding-left:20px;padding-right:20px;}.hero h1{font-size:24px;}.stats-bar{display:none;}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">job<span>hunt</span>.ai</div>
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-n" id="total-count">55</div><div class="stat-l">Total Roles</div></div>
+      <div class="stat"><div class="stat-n">2</div><div class="stat-l">Cities</div></div>
+      <div class="stat"><div class="stat-n">25–45</div><div class="stat-l">LPA Target</div></div>
+      <div class="stat"><div class="stat-n" id="fresh-count">42</div><div class="stat-l">Fresh &lt;48h</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-inner">
+    <h1>Open Roles in <em>Founder's Office</em>, Chief of Staff,<br/>Growth &amp; Strategy</h1>
+    <p>Auto-scraped from LinkedIn &amp; Naukri · Last updated: 13 Mar 2026, 03:44 PM · Gurgaon &amp; Mumbai</p>
+    <div class="pills">
+      <div class="pill">📍 Gurgaon &amp; Mumbai</div>
+      <div class="pill">💰 25–45 LPA</div>
+      <div class="pill">📅 4.5 Years Experience</div>
+      <div class="pill">🏢 Any Stage · Prefer Established</div>
+      <div class="pill">🛒 D2C Preferred</div>
+    </div>
+  </div>
+</div>
+
+<div class="filters-bar">
+  <div class="filters-inner">
+    <input class="search-box" type="text" placeholder="Search role, company..." id="search" oninput="filterJobs()"/>
+    <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" onclick="setFilter('founders',this)">Founder's Office</button>
+    <button class="filter-btn" onclick="setFilter('cos',this)">Chief of Staff</button>
+    <button class="filter-btn" onclick="setFilter('growth',this)">Growth</button>
+    <button class="filter-btn" onclick="setFilter('strategy',this)">Strategy</button>
+    <button class="filter-btn" onclick="setFilter('gurgaon',this)">Gurgaon</button>
+    <button class="filter-btn" onclick="setFilter('mumbai',this)">Mumbai</button>
+    <button class="filter-btn" onclick="setFilter('d2c',this)">D2C</button>
+    <span class="results-count" id="results-count">55 roles</span>
+  </div>
+</div>
+
+<div class="grid-wrap"><div class="grid" id="job-grid"></div></div>
+
+<script>
+const JOBS = [
+  {
+    "role": "Founder Office",
+    "company": "Rentfoxxy",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "1 day ago",
+    "url": "https://www.naukri.com/job-listings-founder-office-rentfoxxy-gurugram-3-to-8-years-120326032259 \"Founder Office\"",
+    "salary": null,
+    "exp": "3-8 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Job Opportunity: Founders Office / Marketing/ Tech",
+    "company": "Shephertz Technologies",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "1 week ago",
+    "url": "https://www.naukri.com/job-listings-opportunity-founders-office-marketing-tech-shephertz-technologies-gurugram-delhi-ncr-0-to-1-years-060326014762 \"Job Opportunity: Founders Office / Marketing/ Tech\"",
+    "salary": null,
+    "exp": "0-1 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Founders Office",
+    "company": "Easemytrip",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-founders-office-easemytrip-gurugram-0-to-1-years-270226002191 \"Founders Office\"",
+    "salary": null,
+    "exp": "Not specified",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Founders Office",
+    "company": "Posted by Crossing Hurdles",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "2 weeks ago",
+    "url": "https://www.naukri.com/job-listings-founders-office-crossing-hurdles-gurugram-1-to-3-years-250226934352 \"Founders Office\"",
+    "salary": null,
+    "exp": "1-3 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Founders office",
+    "company": "Autope Payment Solutions",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-founders-office-autope-solutions-gurugram-3-to-4-years-050226024413 \"Founders office\"",
+    "salary": "5-15 Lacs PA",
+    "exp": "3-4 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Executive Assistant - Founders Office",
+    "company": "Indicold",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-executive-assistant-founders-office-indicold-gurugram-0-to-3-years-160924501963 \"Executive Assistant - Founders Office\"",
+    "salary": null,
+    "exp": "0-3 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Founders Office (Marketing)",
+    "company": "Superstuff",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-founders-office-marketing-superstuff-gurugram-1-to-3-years-110625503399 \"Founders Office (Marketing",
+    "salary": null,
+    "exp": "1-3 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Founders Office",
+    "company": "Armory Startup",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-founders-office-armory-startup-gurugram-2-to-4-years-031224506063 \"Founders Office\"",
+    "salary": null,
+    "exp": "2-4 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Founders Office - Analyst",
+    "company": "Zippee",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-founders-office-analyst-zippee-gurugram-0-to-3-years-250825505101 \"Founders Office - Analyst\"",
+    "salary": null,
+    "exp": "0-3 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Business Analyst : Founder s Office",
+    "company": "Daiom",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-business-analyst-founder-s-office-daiom-gurugram-1-to-2-years-130624501999 \"Business Analyst : Founder s Office\"",
+    "salary": null,
+    "exp": "1-2 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Founder s Office",
+    "company": "PolicyX.com",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-founder-s-office-policyx-com-gurugram-2-to-6-years-181125504066 \"Founder s Office\"",
+    "salary": null,
+    "exp": "2-6 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Head Office",
+    "company": "Ram Gopal College Of Pharmacy",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-head-office-ram-gopal-college-of-pharmacy-gurugram-6-to-11-years-301224501330 \"Head Office\"",
+    "salary": null,
+    "exp": "6-11 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Director \\| Office Leasing \\|",
+    "company": "Colliers",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-director-office-leasing-colliers-international-india-property-service-pvt-ltd-gurugram-4-to-10-years-200126500677 \"Director | Office Leasing |\"",
+    "salary": null,
+    "exp": "4-10 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Associate Manager (CTO Office)",
+    "company": "Bharatrohan",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-associate-manager-cto-office-bharat-rohan-airborne-innovations-private-limited-gurugram-2-to-4-years-150126500576 \"Associate Manager (CTO Office",
+    "salary": null,
+    "exp": "2-4 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Head office",
+    "company": "Dd International",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-head-office-dd-international-pvt-ltd-tarn-taran-new-delhi-gurugram-amritsar-karnal-5-to-10-years-040925500417 \"Head office\"",
+    "salary": null,
+    "exp": "5-10 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Head Office",
+    "company": "Vikas Developers",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-head-office-vikas-developers-gurugram-6-to-10-years-020725503525 \"Head Office\"",
+    "salary": null,
+    "exp": "6-10 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Founder s Office Assistant - Intern",
+    "company": "Optimite",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-founder-s-office-assistant-intern-optimite-gurugram-0-to-3-years-260923500450 \"Founder s Office Assistant - Intern\"",
+    "salary": null,
+    "exp": "Not specified",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Executive Assistant",
+    "company": "Shanti Informatics",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "4 days ago",
+    "url": "https://www.naukri.com/job-listings-executive-assistant-shanti-informatics-gurugram-1-to-5-years-210226000069 \"Executive Assistant\"",
+    "salary": "3-6 Lacs PA",
+    "exp": "1-5 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Growth Associate",
+    "company": "Posted by Talinkd Solutions",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "1 week ago",
+    "url": "https://www.naukri.com/job-listings-growth-associate-talinkd-solutions-gurugram-0-to-2-years-050326027103 \"Growth Associate\"",
+    "salary": "1-2 Lacs PA",
+    "exp": "0-2 Yrs",
+    "tags": [
+      "growth",
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Founder's Content And Distribution Manager",
+    "company": "Posted by Veerwal Getwork Services",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "founders",
+    "posted": "1 week ago",
+    "url": "https://www.naukri.com/job-listings-founder-s-content-and-distribution-manager-veerwal-getwork-services-gurugram-0-to-1-years-030326013110 \"Founder's Content And Distribution Manager\"",
+    "salary": null,
+    "exp": "0-1 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Founder Office",
+    "company": "CareerFit.ai",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "1 day ago",
+    "url": "https://www.naukri.com/job-listings-founder-office-careerfit-ai-mumbai-3-to-6-years-120326505196 \"Founder Office\"",
+    "salary": null,
+    "exp": "3-6 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Coordinator - Founders Office",
+    "company": "Ground Zero",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "1 day ago",
+    "url": "https://www.naukri.com/job-listings-coordinator-founders-office-ground-zero-mumbai-5-to-10-years-110326502706 \"Coordinator - Founders Office\"",
+    "salary": null,
+    "exp": "5-10 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Founders Office Executive / Executive Assistant",
+    "company": "Polco Creations",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "3 days ago",
+    "url": "https://www.naukri.com/job-listings-founders-office-executive-executive-assistant-polco-creations-mumbai-bhiwandi-mumbai-all-areas-1-to-5-years-100326021233 \"Founders Office Executive / Executive Assistant\"",
+    "salary": "3-5 Lacs PA",
+    "exp": "1-5 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Founders Office",
+    "company": "HumanBit",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "1 week ago",
+    "url": "https://www.naukri.com/job-listings-founders-office-humanbit-bengaluru-mumbai-all-areas-1-to-3-years-281125034188 \"Founders Office\"",
+    "salary": "8-14 Lacs PA",
+    "exp": "1-3 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Project Manager, Founders Office - Dainik Bhaskar Group",
+    "company": "Dainik Bhaskar Group",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "1 week ago",
+    "url": "https://www.naukri.com/job-listings-project-manager-founders-office-dainik-bhaskar-group-dainik-bhaskar-group-mumbai-3-to-5-years-270226935219 \"Project Manager, Founders Office - Dainik Bhaskar Group\"",
+    "salary": null,
+    "exp": "3-5 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Intern - Growth & Sales - Founders Office",
+    "company": "Zenskar",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "3 weeks ago",
+    "url": "https://www.naukri.com/job-listings-intern-growth-sales-founders-office-zenskar-mumbai-delhi-ncr-bengaluru-0-to-1-years-170226913152 \"Intern - Growth & Sales - Founders Office\"",
+    "salary": null,
+    "exp": "0-1 Yrs",
+    "tags": [
+      "growth",
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Founders Office",
+    "company": "Coverfox group",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-founders-office-coverfox-group-mumbai-all-areas-1-to-6-years-060226009696 \"Founders Office\"",
+    "salary": "10-20 Lacs PA",
+    "exp": "1-6 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Product analyst - Founders office",
+    "company": "Careerninja",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-product-analyst-founders-office-careerninja-mumbai-3-to-7-years-300823500352 \"Product analyst - Founders office\"",
+    "salary": null,
+    "exp": "3-7 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Manager Strategy, Founders Office",
+    "company": "Indra Shakti Ventures",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-manager-strategy-founders-office-indra-shakti-ventures-mumbai-3-to-6-years-250425501218 \"Manager Strategy, Founders Office\"",
+    "salary": null,
+    "exp": "3-6 Yrs",
+    "tags": [
+      "strategy",
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Manager Executive Operations and Programmes Founders Office",
+    "company": "Accelerate Indian Philanthropy",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "2 weeks ago",
+    "url": "https://www.naukri.com/job-listings-manager-executive-operations-and-programmes-founders-office-accelerate-indian-philanthropy-aip-mumbai-hyderabad-new-delhi-chennai-bengaluru-6-to-11-years-250226500796 \"Manager Executive Operations and Programmes Founders Office\"",
+    "salary": null,
+    "exp": "6-11 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Executive Assistant Founders Office",
+    "company": "Aastha Fintech",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-executive-assistant-founders-office-aastha-fintech-kolkata-mumbai-new-delhi-hyderabad-pune-chennai-bengaluru-8-to-10-years-210125505016 \"Executive Assistant Founders Office\"",
+    "salary": null,
+    "exp": "8-10 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Sales Development Representative - Founders Office",
+    "company": "Winvesta",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-sales-development-representative-founders-office-winvesta-mumbai-3-to-5-years-190625503312 \"Sales Development Representative - Founders Office\"",
+    "salary": null,
+    "exp": "3-5 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Sales - Founders Office",
+    "company": "Winvesta",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-sales-founders-office-winvesta-mumbai-3-to-5-years-190625503311 \"Sales - Founders Office\"",
+    "salary": null,
+    "exp": "3-5 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Key Accounts - Founders Office",
+    "company": "Winvesta",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-key-accounts-founders-office-winvesta-mumbai-3-to-5-years-190625503309 \"Key Accounts - Founders Office\"",
+    "salary": null,
+    "exp": "3-5 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Business Development Representative - Founders Office",
+    "company": "Winvesta",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-business-development-representative-founders-office-winvesta-mumbai-3-to-5-years-190625503298 \"Business Development Representative - Founders Office\"",
+    "salary": null,
+    "exp": "3-5 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Founders Office",
+    "company": "Superstuff",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-founders-office-superstuff-kolkata-mumbai-new-delhi-hyderabad-pune-chennai-bengaluru-1-to-4-years-130625502854 \"Founders Office\"",
+    "salary": null,
+    "exp": "1-4 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Program Manager - Founders Office",
+    "company": "Drivetrain",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-program-manager-founders-office-drivetrain-kolkata-mumbai-new-delhi-hyderabad-pune-chennai-bengaluru-1-to-3-years-080825503621 \"Program Manager - Founders Office\"",
+    "salary": null,
+    "exp": "1-3 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Founders office - Coordinator",
+    "company": "Infinite Reality Technology",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "founders",
+    "posted": "2 days ago",
+    "url": "https://www.naukri.com/job-listings-founders-office-coordinator-infinite-reality-technology-mumbai-1-to-3-years-110326013384 \"Founders office - Coordinator\"",
+    "salary": "2.16-3 Lacs PA",
+    "exp": "1-3 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief Of Staff (KP Singh Foundation)",
+    "company": "DLF Ltd",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "cos",
+    "posted": "1 day ago",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-kp-singh-foundation-dlf-ltd-gurugram-10-to-17-years-120326013353 \"Chief Of Staff (KP Singh Foundation",
+    "salary": null,
+    "exp": "10-17 Yrs",
+    "tags": [
+      "mnc"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief of Staff",
+    "company": "Wattmonk Technologies",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "cos",
+    "posted": "1 day ago",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-wattmonk-technologies-gurugram-2-to-4-years-110326031626 \"Chief of Staff\"",
+    "salary": null,
+    "exp": "2-4 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief Of Staff To Founder & CEO",
+    "company": "Kapoor Diesels Garage",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "cos",
+    "posted": "2 days ago",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-to-founder-ceo-kapoor-diesels-garage-gurugram-2-to-7-years-100326036027 \"Chief Of Staff To Founder & CEO\"",
+    "salary": null,
+    "exp": "2-7 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief Of Staff",
+    "company": "ElevenX Capital",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "cos",
+    "posted": "2 weeks ago",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-exc-managed-services-gurugram-5-to-10-years-250226500823 \"Chief Of Staff\"",
+    "salary": null,
+    "exp": "5-10 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief of Staff",
+    "company": "Procol",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "cos",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-procol-gurugram-5-to-10-years-301224504644 \"Chief of Staff\"",
+    "salary": null,
+    "exp": "5-10 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Urgent Hiring For Chief of Staff-Strategic Finance",
+    "company": "RSPL Group",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "cos",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-urgent-hiring-for-chief-of-staff-strategic-finance-rspl-group-gurugram-3-to-8-years-280126028271 \"Urgent Hiring For Chief of Staff-Strategic Finance\"",
+    "salary": null,
+    "exp": "3-8 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief of Staff",
+    "company": "Posted by the Placement Drive",
+    "location": "Gurgaon, India",
+    "city": "gurgaon",
+    "category": "cos",
+    "posted": "4 days ago",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-the-placement-drive-gurugram-10-to-15-years-090326003308 \"Chief of Staff\"",
+    "salary": "50-65 Lacs PA",
+    "exp": "10-15 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief of Staff",
+    "company": "Persolkelly India",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "cos",
+    "posted": "1 day ago",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-persolkelly-mumbai-nagpur-thane-nashik-pune-aurangabad-12-to-19-years-120326505715 \"Chief of Staff\"",
+    "salary": null,
+    "exp": "12-19 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief Staff",
+    "company": "HumanBit",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "cos",
+    "posted": "2 weeks ago",
+    "url": "https://www.naukri.com/job-listings-chief-staff-humanbit-mumbai-all-areas-2-to-5-years-270226007507 \"Chief Staff\"",
+    "salary": "20-35 Lacs PA",
+    "exp": "2-5 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief of Staff Lite (CoSLite)",
+    "company": "Artha Real Estate",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "cos",
+    "posted": "3 days ago",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-lite-coslite-artha-energy-projects-mumbai-4-to-10-years-090326501727 \"Chief of Staff Lite (CoSLite",
+    "salary": null,
+    "exp": "4-10 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief of Staff",
+    "company": "Accelerate Indian Philanthropy",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "cos",
+    "posted": "6 days ago",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-accelerate-indian-philanthropy-aip-mumbai-3-to-6-years-060326500640 \"Chief of Staff\"",
+    "salary": null,
+    "exp": "3-6 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief Staff",
+    "company": "Posted by Focus Management Consultants",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "cos",
+    "posted": "2 weeks ago",
+    "url": "https://www.naukri.com/job-listings-chief-staff-focus-management-consultants-mumbai-all-areas-3-to-8-years-060126030526 \"Chief Staff\"",
+    "salary": "12-22 Lacs PA",
+    "exp": "3-8 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief of Staff",
+    "company": "KS Legal & Associates",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "cos",
+    "posted": "2 weeks ago",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-ks-legal-mumbai-churchgate-10-to-15-years-250226937759 \"Chief of Staff\"",
+    "salary": null,
+    "exp": "10-15 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Manager - Strategy/Chief Of Staff - BFSI",
+    "company": "The Growth Partners Tgp",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "cos",
+    "posted": "2 weeks ago",
+    "url": "https://www.naukri.com/job-listings-manager-strategy-chief-of-staff-bfsi-the-growth-partners-tgp-mumbai-5-to-8-years-230226904120 \"Manager - Strategy/Chief Of Staff - BFSI\"",
+    "salary": null,
+    "exp": "5-8 Yrs",
+    "tags": [
+      "growth",
+      "strategy",
+      "startup"
+    ],
+    "fresh": false,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief of Staff",
+    "company": "Indra Shakti Ventures",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "cos",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-indra-shakti-ventures-mumbai-4-to-5-years-220825501844 \"Chief of Staff\"",
+    "salary": null,
+    "exp": "4-5 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief of Staff",
+    "company": "Mayfair Housing",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "cos",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-mayfair-housing-pvt-ltd-mumbai-2-to-4-years-120925500757 \"Chief of Staff\"",
+    "salary": null,
+    "exp": "2-4 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  },
+  {
+    "role": "Chief of Staff To MD",
+    "company": "DSP Investment Managers",
+    "location": "Mumbai, India",
+    "city": "mumbai",
+    "category": "cos",
+    "posted": "Today",
+    "url": "https://www.naukri.com/job-listings-chief-of-staff-to-md-dsp-investment-managers-mumbai-2-to-4-years-100725501285 \"Chief of Staff To MD\"",
+    "salary": null,
+    "exp": "2-4 Yrs",
+    "tags": [
+      "startup"
+    ],
+    "fresh": true,
+    "source": "naukri"
+  }
+];
+let JOBS = [];
+let activeFilter = 'all';
+
+// ── Expiry badge helper ───────────────────────────────────────────────────────
+function expiryBadge(days_left, expires_on) {
+  if (days_left === undefined || days_left === null) return '';
+  const d = Number(days_left);
+  if (d <= 0)  return `<span class="expiry-badge expired" title="Expired on ${expires_on}">⛔ Expired</span>`;
+  if (d <= 3)  return `<span class="expiry-badge urgent"  title="Expires ${expires_on}">🚨 ${d}d left</span>`;
+  if (d <= 7)  return `<span class="expiry-badge warning" title="Expires ${expires_on}">⚠️ ${d}d left</span>`;
+  if (d <= 14) return `<span class="expiry-badge soon"    title="Expires ${expires_on}">🕐 ${d}d left</span>`;
+  return `<span class="expiry-badge safe" title="Expires ${expires_on}">✅ ${d}d left</span>`;
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterJobs();
+}
+
+function filterJobs() {
+  const q    = document.getElementById('search').value.toLowerCase();
+  const grid = document.getElementById('job-grid');
+  grid.innerHTML = '';
+
+  const filtered = JOBS.filter(j => {
+    const mf = activeFilter === 'all'
+      || j.category === activeFilter
+      || (activeFilter === 'gurgaon' && j.city === 'gurgaon')
+      || (activeFilter === 'mumbai'  && j.city === 'mumbai')
+      || (activeFilter === 'd2c'     && j.tags && j.tags.includes('d2c'));
+    const ms = !q
+      || j.role.toLowerCase().includes(q)
+      || (j.company || '').toLowerCase().includes(q)
+      || (j.location || '').toLowerCase().includes(q);
+    return mf && ms;
+  });
+
+  document.getElementById('results-count').textContent = filtered.length + ' role' + (filtered.length !== 1 ? 's' : '');
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty"><h3>No roles found</h3><p>Try adjusting your search or filters.</p></div>';
+    return;
+  }
+
+  filtered.sort((a, b) => (b.fresh ? 1 : 0) - (a.fresh ? 1 : 0));
+
+  const cm = {
+    founders: { label: "Founder's Office", color: 'var(--accent)',  border: '#6c63ff' },
+    cos:      { label: 'Chief of Staff',   color: 'var(--accent2)', border: '#00d4aa' },
+    growth:   { label: 'Growth',           color: 'var(--accent4)', border: '#ffa94d' },
+    strategy: { label: 'Strategy',         color: 'var(--accent3)', border: '#ff6b6b' },
+  };
+  const tl    = { d2c: '🛒 D2C', startup: '🚀 Startup', mnc: '🏢 MNC', growth: '📈 Growth', strategy: '🧩 Strategy' };
+  const emoji = { founders: '🎯', cos: '🤝', growth: '📈', strategy: '♟️' };
+
+  filtered.forEach(j => {
+    const m          = cm[j.category] || cm.founders;
+    const freshBadge = j.posted && (j.posted.includes('hour') || j.posted.includes('minute'))
+      ? '<span class="badge-hot">🔥 HOT</span>'
+      : j.fresh ? '<span class="badge-new">NEW</span>' : '';
+    const salaryChip = j.salary ? `<div class="chip"><span class="dot g"></span>${j.salary}</div>` : '';
+    const tags       = (j.tags || []).map(t => `<span class="tag ${t}">${tl[t] || t}</span>`).join('');
+    const src        = j.source === 'naukri'
+      ? '<span class="source-badge">Naukri</span>' : '<span class="source-badge">LinkedIn</span>';
+    const expiry     = expiryBadge(j.days_left, j.expires_on);
+
+    grid.innerHTML += `
+      <a class="card ${j.category}" href="${j.url}" target="_blank" rel="noopener noreferrer">
+        <div class="card-top">
+          <div class="company-logo">${emoji[j.category] || '💼'}</div>
+          <div class="card-meta">
+            <div class="card-role">${j.role}</div>
+            <div class="card-company">${j.company || 'Company'}</div>
+          </div>
+          ${freshBadge}
+        </div>
+        <div class="card-info">
+          <div class="chip"><span class="dot"></span>${j.location}</div>
+          <div class="chip"><span class="dot o"></span>${j.exp}</div>
+          ${salaryChip}
+          <div class="chip" style="color:${m.color}">${m.label}</div>
+          ${src}
+        </div>
+        <div class="card-tags">${tags}</div>
+        <div class="card-footer">
+          <span class="posted-time">⏱ ${j.posted}</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            ${expiry}
+            <span class="apply-btn">Apply →</span>
+          </div>
+        </div>
+      </a>`;
+  });
+}
+
+// ── Boot: fetch from /api/jobs (Vercel) or fall back to embedded JOBS ─────────
+async function boot() {
+  const grid = document.getElementById('job-grid');
+  grid.innerHTML = '<div class="empty"><p style="color:var(--muted)">Loading jobs...</p></div>';
+  try {
+    const res  = await fetch('/api/jobs');
+    if (!res.ok) throw new Error('API not ready');
+    const data = await res.json();
+    JOBS = data.jobs || [];
+    if (data.scraped_at) {
+      document.querySelector('.hero p').textContent =
+        `Auto-scraped from Naukri · Last updated: ${data.scraped_at} · Gurgaon & Mumbai`;
+    }
+    document.getElementById('total-count').textContent = JOBS.length;
+    document.getElementById('fresh-count').textContent = JOBS.filter(j => j.fresh).length;
+  } catch {
+    // Running locally — JOBS already embedded in page by scraper.py
+    JOBS = window._JOBS || JOBS;
+  }
+  filterJobs();
+}
+
+boot();
+</script>
+</body>
+</html>

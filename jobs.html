@@ -102,7 +102,7 @@
 <div class="grid-wrap"><div class="grid" id="job-grid"></div></div>
 
 <script>
-const JOBS = [
+const _EMBEDDED_JOBS = [
   {
     "role": "Founder Office",
     "company": "Rentfoxxy",
@@ -1103,7 +1103,7 @@ async function boot() {
     document.getElementById('fresh-count').textContent = JOBS.filter(j => j.fresh).length;
   } catch {
     // Running locally — JOBS already embedded in page by scraper.py
-    JOBS = window._JOBS || JOBS;
+    JOBS = window._JOBS || _EMBEDDED_JOBS;
   }
   filterJobs();
 }

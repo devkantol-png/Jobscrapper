@@ -134,18 +134,33 @@ def parse_linkedin(search):
             if any(c in combined for c in other_cities):
                 continue  # belongs to another city — skip
 
-        # LinkedIn titles: "Role at Company | LinkedIn"  or  "Role - Company"
-        at_m = re.search(r'^(.+?)\s+at\s+(.+?)(?:\s*\|\s*LinkedIn.*)?$', raw_title, re.IGNORECASE)
-        if at_m:
+        # LinkedIn titles come in 3 formats — handle all of them:
+        # 1) "Company hiring Role [in Location]"  e.g. "Dtravel hiring Founder's Office in Mumbai"
+        # 2) "Role at Company | LinkedIn"          e.g. "Chief of Staff at Moxie Beauty | LinkedIn"
+        # 3) "Role - Part - Company - LinkedIn"    e.g. "Founder's Office - Strategy - Salesable"
+        hire_m = re.search(
+            r'^(.+?)\s+(?:is\s+)?hiring\s+(.+?)(?:\s+in\s+[\w\s,]+)?$',
+            raw_title, re.IGNORECASE
+        )
+        at_m = re.search(
+            r'^(.+?)\s+at\s+(.+?)(?:\s*\|\s*LinkedIn.*)?$',
+            raw_title, re.IGNORECASE
+        )
+        if hire_m:
+            company = clean(hire_m.group(1))
+            role    = clean(hire_m.group(2))
+        elif at_m:
             role    = clean(at_m.group(1))
-            company = clean(at_m.group(2))
+            company = clean(at_m.group(2).split('|')[0].strip())
         else:
-            dash_m  = re.search(r'^(.+?)\s*[-–]\s*(.+?)(?:\s*\|\s*LinkedIn)?$', raw_title)
-            if dash_m:
-                role    = clean(dash_m.group(1))
-                company = clean(dash_m.group(2))
+            # strip trailing "- LinkedIn" or "| LinkedIn" then split on dashes
+            clean_t = re.sub(r'\s*[-|]\s*LinkedIn.*$', '', raw_title, flags=re.IGNORECASE).strip()
+            parts   = [p.strip() for p in re.split(r'\s*[-–]\s*', clean_t) if p.strip()]
+            if len(parts) >= 2:
+                role    = clean(parts[0])
+                company = clean(parts[-1])
             else:
-                role    = clean(re.sub(r'\s*\|\s*LinkedIn.*$', '', raw_title, flags=re.IGNORECASE))
+                role    = clean(clean_t)
                 company = ""
 
         posted_m  = re.search(r'(\d+\s+(?:day|week|hour|month)s?\s+ago)', desc, re.IGNORECASE)

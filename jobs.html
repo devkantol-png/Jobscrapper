@@ -53,6 +53,11 @@
     .expiry-badge.warning{background:rgba(255,169,77,.15);color:var(--accent4);border:1px solid rgba(255,169,77,.3);}
     .expiry-badge.soon{background:rgba(255,220,100,.1);color:#ffd700;border:1px solid rgba(255,215,0,.25);}
     .expiry-badge.safe{background:rgba(0,212,170,.1);color:var(--accent2);border:1px solid rgba(0,212,170,.25);}
+    .recency-btn{padding:7px 13px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .recency-btn:hover,.recency-btn.active{background:var(--accent2);border-color:var(--accent2);color:#000;font-weight:600;}
+    .filter-sep{width:1px;height:22px;background:var(--border);flex-shrink:0;margin:0 2px;}
+    .applied-btn{font-size:11px;border:1px solid var(--border);border-radius:6px;padding:4px 10px;background:transparent;color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap;}.applied-btn:hover{border-color:var(--accent2);color:var(--accent2);}.applied-btn.done{background:rgba(0,212,170,.12);color:var(--accent2);border-color:rgba(0,212,170,.3);}
+    .card.applied-card{opacity:.5;}
     ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
     @media(max-width:768px){header,.hero,.filters-bar,.grid-wrap{padding-left:20px;padding-right:20px;}.hero h1{font-size:24px;}.stats-bar{display:none;}}
   </style>
@@ -65,7 +70,7 @@
       <div class="stat"><div class="stat-n" id="total-count">55</div><div class="stat-l">Total Roles</div></div>
       <div class="stat"><div class="stat-n">2</div><div class="stat-l">Cities</div></div>
       <div class="stat"><div class="stat-n">25–45</div><div class="stat-l">LPA Target</div></div>
-      <div class="stat"><div class="stat-n" id="fresh-count">42</div><div class="stat-l">Fresh &lt;48h</div></div>
+      <div class="stat"><div class="stat-n" id="fresh-count">—</div><div class="stat-l">New Today</div></div>
     </div>
   </div>
 </header>
@@ -87,6 +92,14 @@
 <div class="filters-bar">
   <div class="filters-inner">
     <input class="search-box" type="text" placeholder="Search role, company..." id="search" oninput="filterJobs()"/>
+    <span class="results-count" id="results-count">—</span>
+  </div>
+  <div class="filters-inner" style="margin-top:10px;">
+    <button class="recency-btn" onclick="setRecency('today',this)">🔴 Today</button>
+    <button class="recency-btn" onclick="setRecency('3d',this)">📅 3 Days</button>
+    <button class="recency-btn active" onclick="setRecency('7d',this)">📆 This Week</button>
+    <button class="recency-btn" onclick="setRecency('all',this)">📂 All Active</button>
+    <div class="filter-sep"></div>
     <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
     <button class="filter-btn" onclick="setFilter('founders',this)">Founder's Office</button>
     <button class="filter-btn" onclick="setFilter('cos',this)">Chief of Staff</button>
@@ -97,7 +110,7 @@
     <button class="filter-btn" onclick="setFilter('d2c',this)">D2C</button>
     <button class="filter-btn" onclick="setFilter('naukri',this)">📋 Naukri</button>
     <button class="filter-btn" onclick="setFilter('linkedin',this)">🔵 LinkedIn</button>
-    <span class="results-count" id="results-count">55 roles</span>
+    <button class="filter-btn" onclick="setFilter('applied',this)">✓ Applied</button>
   </div>
 </div>
 
@@ -992,7 +1005,29 @@ const EMBEDDED_JOBS = [
   }
 ];
 let JOBS = [];
-let activeFilter = 'all';
+let activeFilter  = 'all';
+let activeRecency = '7d';
+
+// ── Applied tracking (localStorage) ──────────────────────────────────────────
+function getApplied() { return JSON.parse(localStorage.getItem('applied_jobs') || '{}'); }
+function toggleApplied(e, url) {
+  e.preventDefault(); e.stopPropagation();
+  const a = getApplied();
+  if (a[url]) delete a[url]; else a[url] = Date.now();
+  localStorage.setItem('applied_jobs', JSON.stringify(a));
+  filterJobs();
+}
+
+// ── Recency helpers ───────────────────────────────────────────────────────────
+function parseDaysAgo(posted) {
+  const s = (posted || '').toLowerCase();
+  if (!s || s === 'today' || s.includes('hour') || s.includes('minute')) return 0;
+  if (s.includes('yesterday')) return 1;
+  const d = s.match(/(\d+)\s*day/);   if (d) return parseInt(d[1]);
+  const w = s.match(/(\d+)\s*week/);  if (w) return parseInt(w[1]) * 7;
+  const m = s.match(/(\d+)\s*month/); if (m) return parseInt(m[1]) * 30;
+  return 0;
+}
 
 // ── Expiry badge helper ───────────────────────────────────────────────────────
 function expiryBadge(days_left, expires_on) {
@@ -1012,19 +1047,35 @@ function setFilter(f, btn) {
   filterJobs();
 }
 
+function setRecency(r, btn) {
+  activeRecency = r;
+  document.querySelectorAll('.recency-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterJobs();
+}
+
 function filterJobs() {
-  const q    = document.getElementById('search').value.toLowerCase();
-  const grid = document.getElementById('job-grid');
+  const q      = document.getElementById('search').value.toLowerCase();
+  const grid   = document.getElementById('job-grid');
+  const applied = getApplied();
+  const cutoff  = { today: 1, '3d': 3, '7d': 7, all: 9999 }[activeRecency] || 9999;
   grid.innerHTML = '';
 
   const filtered = JOBS.filter(j => {
+    // Hard rule: never show expired jobs
+    if ((j.days_left ?? 99) <= 0) return false;
+    // Recency gate
+    if (parseDaysAgo(j.posted) >= cutoff) return false;
+    // Category / source / applied filter
     const mf = activeFilter === 'all'
       || j.category === activeFilter
       || (activeFilter === 'gurgaon'  && j.city === 'gurgaon')
       || (activeFilter === 'mumbai'   && j.city === 'mumbai')
       || (activeFilter === 'd2c'      && j.tags && j.tags.includes('d2c'))
       || (activeFilter === 'naukri'   && j.source === 'naukri')
-      || (activeFilter === 'linkedin' && j.source === 'linkedin');
+      || (activeFilter === 'linkedin' && j.source === 'linkedin')
+      || (activeFilter === 'applied'  && !!applied[j.url]);
+    // Search
     const ms = !q
       || j.role.toLowerCase().includes(q)
       || (j.company || '').toLowerCase().includes(q)
@@ -1035,11 +1086,12 @@ function filterJobs() {
   document.getElementById('results-count').textContent = filtered.length + ' role' + (filtered.length !== 1 ? 's' : '');
 
   if (!filtered.length) {
-    grid.innerHTML = '<div class="empty"><h3>No roles found</h3><p>Try adjusting your search or filters.</p></div>';
+    grid.innerHTML = '<div class="empty"><h3>No roles found</h3><p>Try a wider time range or different filter.</p></div>';
     return;
   }
 
-  filtered.sort((a, b) => (b.fresh ? 1 : 0) - (a.fresh ? 1 : 0));
+  // Sort: newest posted first
+  filtered.sort((a, b) => parseDaysAgo(a.posted) - parseDaysAgo(b.posted));
 
   const cm = {
     founders: { label: "Founder's Office", color: 'var(--accent)',  border: '#6c63ff' },
@@ -1051,18 +1103,22 @@ function filterJobs() {
   const emoji = { founders: '🎯', cos: '🤝', growth: '📈', strategy: '♟️' };
 
   filtered.forEach(j => {
-    const m          = cm[j.category] || cm.founders;
-    const freshBadge = j.posted && (j.posted.includes('hour') || j.posted.includes('minute'))
+    const m           = cm[j.category] || cm.founders;
+    const da          = parseDaysAgo(j.posted);
+    const freshBadge  = da === 0 && j.posted && (j.posted.includes('hour') || j.posted.includes('minute'))
       ? '<span class="badge-hot">🔥 HOT</span>'
-      : j.fresh ? '<span class="badge-new">NEW</span>' : '';
-    const salaryChip = j.salary ? `<div class="chip"><span class="dot g"></span>${j.salary}</div>` : '';
-    const tags       = (j.tags || []).map(t => `<span class="tag ${t}">${tl[t] || t}</span>`).join('');
-    const src        = j.source === 'naukri'
+      : da <= 1 ? '<span class="badge-new">NEW</span>' : '';
+    const salaryChip  = j.salary ? `<div class="chip"><span class="dot g"></span>${j.salary}</div>` : '';
+    const tags        = (j.tags || []).map(t => `<span class="tag ${t}">${tl[t] || t}</span>`).join('');
+    const src         = j.source === 'naukri'
       ? '<span class="source-badge">Naukri</span>' : '<span class="source-badge">LinkedIn</span>';
-    const expiry     = expiryBadge(j.days_left, j.expires_on);
+    const expiry      = expiryBadge(j.days_left, j.expires_on);
+    const isApplied   = !!applied[j.url];
+    const appliedCls  = isApplied ? ' applied-card' : '';
+    const appliedBtn  = `<button class="applied-btn ${isApplied ? 'done' : ''}" onclick="toggleApplied(event,'${j.url}')">${isApplied ? '✓ Applied' : 'Mark Applied'}</button>`;
 
     grid.innerHTML += `
-      <a class="card ${j.category}" href="${j.url}" target="_blank" rel="noopener noreferrer">
+      <a class="card ${j.category}${appliedCls}" href="${j.url}" target="_blank" rel="noopener noreferrer">
         <div class="card-top">
           <div class="company-logo">${emoji[j.category] || '💼'}</div>
           <div class="card-meta">
@@ -1082,6 +1138,7 @@ function filterJobs() {
         <div class="card-footer">
           <span class="posted-time">⏱ ${j.posted}</span>
           <div style="display:flex;gap:8px;align-items:center;">
+            ${appliedBtn}
             ${expiry}
             <span class="apply-btn">Apply →</span>
           </div>
@@ -1124,8 +1181,9 @@ async function boot() {
     // Running locally — enrich embedded jobs with calculated expiry
     JOBS = EMBEDDED_JOBS.map(j => ({ ...j, ...calcExpiry(j.posted) }));
   }
-  document.getElementById('total-count').textContent = JOBS.length;
-  document.getElementById('fresh-count').textContent = JOBS.filter(j => j.fresh).length;
+  const active = JOBS.filter(j => (j.days_left ?? 99) > 0);
+  document.getElementById('total-count').textContent = active.length;
+  document.getElementById('fresh-count').textContent = active.filter(j => parseDaysAgo(j.posted) === 0).length;
   filterJobs();
 }
 

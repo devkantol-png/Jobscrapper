@@ -205,6 +205,8 @@ def parse_naukri(search):
         posted_m  = re.search(r'(\d+\s+(?:day|week|hour|month)s?\s+ago)', block, re.IGNORECASE)
         posted    = posted_m.group(1) if posted_m else "Today"
         exp_date, days_left = calc_expiry(posted)
+        if days_left == 0:
+            continue
         jobs.append({
             "role": title, "company": company,
             "location": search["city"].capitalize() + ", India",

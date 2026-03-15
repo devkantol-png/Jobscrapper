@@ -102,7 +102,7 @@
 <div class="grid-wrap"><div class="grid" id="job-grid"></div></div>
 
 <script>
-const JOBS = [
+const EMBEDDED_JOBS = [
   {
     "role": "Founder Office",
     "company": "Rentfoxxy",
@@ -1086,7 +1086,24 @@ function filterJobs() {
   });
 }
 
-// ── Boot: fetch from /api/jobs (Vercel) or fall back to embedded JOBS ─────────
+// ── Expiry calculator (JS mirror of Python calc_expiry) ──────────────────────
+function calcExpiry(posted) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const s = (posted || '').toLowerCase();
+  let daysAgo = 0;
+  if (s.includes('hour') || s.includes('minute') || s === 'today') daysAgo = 0;
+  else if (/(\d+)\s*day/.test(s))   daysAgo = parseInt(s.match(/(\d+)\s*day/)[1]);
+  else if (/(\d+)\s*week/.test(s))  daysAgo = parseInt(s.match(/(\d+)\s*week/)[1]) * 7;
+  else if (/(\d+)\s*month/.test(s)) daysAgo = parseInt(s.match(/(\d+)\s*month/)[1]) * 30;
+  else if (s.includes('yesterday')) daysAgo = 1;
+  const expiry = new Date(today);
+  expiry.setDate(expiry.getDate() - daysAgo + 30);
+  const daysLeft = Math.max(0, Math.round((expiry - today) / 86400000));
+  const expires_on = expiry.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+  return { expires_on, days_left: daysLeft };
+}
+
+// ── Boot: fetch from /api/jobs (Vercel) or fall back to embedded data ─────────
 async function boot() {
   const grid = document.getElementById('job-grid');
   grid.innerHTML = '<div class="empty"><p style="color:var(--muted)">Loading jobs...</p></div>';
@@ -1099,12 +1116,12 @@ async function boot() {
       document.querySelector('.hero p').textContent =
         `Auto-scraped from Naukri · Last updated: ${data.scraped_at} · Gurgaon & Mumbai`;
     }
-    document.getElementById('total-count').textContent = JOBS.length;
-    document.getElementById('fresh-count').textContent = JOBS.filter(j => j.fresh).length;
   } catch {
-    // Running locally — JOBS already embedded in page by scraper.py
-    JOBS = window._JOBS || JOBS;
+    // Running locally — enrich embedded jobs with calculated expiry
+    JOBS = EMBEDDED_JOBS.map(j => ({ ...j, ...calcExpiry(j.posted) }));
   }
+  document.getElementById('total-count').textContent = JOBS.length;
+  document.getElementById('fresh-count').textContent = JOBS.filter(j => j.fresh).length;
   filterJobs();
 }
 

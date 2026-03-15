@@ -78,42 +78,56 @@ def firecrawl_scrape(url):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+def firecrawl_search(query, num=10):
+    """Use Firecrawl's native search API — more reliable than scraping Google."""
+    payload = json.dumps({
+        "query": query,
+        "limit": num,
+        "lang": "en",
+        "country": "in",
+    }).encode()
+    req = urllib.request.Request(
+        "https://api.firecrawl.dev/v1/search", data=payload,
+        headers={"Authorization": f"Bearer {FIRECRAWL_API_KEY}", "Content-Type": "application/json"},
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read())
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 def parse_linkedin(search):
-    """Search Google for site:linkedin.com/jobs and parse results via Firecrawl."""
-    q   = urllib.parse.quote(f'site:linkedin.com/jobs {search["query"]}')
-    url = f"https://www.google.com/search?q={q}&num=20&hl=en&gl=in"
-    data = firecrawl_scrape(url)
+    """Use Firecrawl search API to find LinkedIn job listings."""
+    query = f'site:linkedin.com/jobs {search["query"]}'
+    data  = firecrawl_search(query, num=10)
     if not data.get("success"):
         return []
-    md = data.get("data", {}).get("markdown", "")
-    jobs = []
+    results   = data.get("data", [])
+    jobs      = []
     city_label = search["city"].capitalize() + ", India"
-    direct_pat   = re.compile(r'\[([^\]]{5,120})\]\((https://(?:www\.|in\.)?linkedin\.com/jobs/view/[^\s\)]+)\)')
-    redirect_pat = re.compile(r'\[([^\]]{5,120})\]\(/url\?[^)]*q=(https?://(?:www\.|in\.)?linkedin\.com/jobs/view/[^&\s\)]+)')
+    li_pat    = re.compile(r'https://(?:www\.|in\.)?linkedin\.com/jobs/view/', re.IGNORECASE)
     seen_urls = set()
-    for pat in (direct_pat, redirect_pat):
-        for m in pat.finditer(md):
-            title   = clean(m.group(1))
-            job_url = m.group(2) if pat is direct_pat else urllib.parse.unquote(m.group(2))
-            if not title or job_url in seen_urls:
-                continue
-            if any(s in job_url.lower() or s in title.lower() for s in ["login","sign in","join","linkedin.com/company","linkedin.com/in/"]):
-                continue
-            seen_urls.add(job_url)
-            snippet   = md[m.end():m.end()+200]
-            company_m = re.search(r'[·\|]\s*([A-Za-z][^\n·\|]{2,50}?)\s*[·\|]', snippet)
-            company   = clean(company_m.group(1)) if company_m else ""
-            posted_m  = re.search(r'(\d+\s+(?:day|week|hour|month)s?\s+ago)', snippet, re.IGNORECASE)
-            posted    = posted_m.group(1) if posted_m else "Today"
-            exp_date, days_left = calc_expiry(posted)
-            jobs.append({
-                "role": title, "company": company, "location": city_label,
-                "city": search["city"], "category": search["category"],
-                "posted": posted, "url": job_url, "salary": None,
-                "exp": "Not specified", "tags": infer_tags(title, company, search["category"]),
-                "fresh": "day" in posted or "hour" in posted or posted == "Today",
-                "expires_on": exp_date, "days_left": days_left, "source": "linkedin",
-            })
+    for result in results:
+        job_url = result.get("url", "")
+        if not li_pat.search(job_url) or job_url in seen_urls:
+            continue
+        seen_urls.add(job_url)
+        title     = clean(result.get("title", ""))
+        desc      = result.get("description", "")
+        company_m = re.search(r'(?:at|@)\s+([A-Za-z][^\n·|·]{2,50}?)(?:\s+in\b|\s*[·|]|\s*$)', desc)
+        company   = clean(company_m.group(1)) if company_m else ""
+        posted_m  = re.search(r'(\d+\s+(?:day|week|hour|month)s?\s+ago)', desc, re.IGNORECASE)
+        posted    = posted_m.group(1) if posted_m else "Today"
+        exp_date, days_left = calc_expiry(posted)
+        jobs.append({
+            "role": title, "company": company, "location": city_label,
+            "city": search["city"], "category": search["category"],
+            "posted": posted, "url": job_url, "salary": None,
+            "exp": "Not specified", "tags": infer_tags(title, company, search["category"]),
+            "fresh": "day" in posted or "hour" in posted or posted == "Today",
+            "expires_on": exp_date, "days_left": days_left, "source": "linkedin",
+        })
     return jobs
 
 

@@ -17,16 +17,14 @@ OUTPUT_FILE       = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jo
 LOG_FILE          = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scraper.log")
 
 LINKEDIN_SEARCHES = [
-    {"keywords": "founder's office",         "location": "Gurugram, Haryana, India",      "category": "founders", "city": "gurgaon"},
-    {"keywords": "founder's office",         "location": "Mumbai, Maharashtra, India",     "category": "founders", "city": "mumbai"},
-    {"keywords": "chief of staff",           "location": "Gurugram, Haryana, India",      "category": "cos",      "city": "gurgaon"},
-    {"keywords": "chief of staff",           "location": "Mumbai, Maharashtra, India",     "category": "cos",      "city": "mumbai"},
-    {"keywords": "growth strategy D2C",      "location": "Gurugram, Haryana, India",      "category": "growth",   "city": "gurgaon"},
-    {"keywords": "growth strategy D2C",      "location": "Mumbai, Maharashtra, India",     "category": "growth",   "city": "mumbai"},
-    {"keywords": "strategy operations",      "location": "Gurugram, Haryana, India",      "category": "strategy", "city": "gurgaon"},
-    {"keywords": "strategy operations",      "location": "Mumbai, Maharashtra, India",     "category": "strategy", "city": "mumbai"},
-    {"keywords": "growth operator startup",  "location": "Gurugram, Haryana, India",      "category": "growth",   "city": "gurgaon"},
-    {"keywords": "growth operator startup",  "location": "Mumbai, Maharashtra, India",     "category": "growth",   "city": "mumbai"},
+    {"query": "founder office jobs Gurgaon India",          "category": "founders", "city": "gurgaon"},
+    {"query": "founder office jobs Mumbai India",           "category": "founders", "city": "mumbai"},
+    {"query": "chief of staff jobs Gurgaon India",          "category": "cos",      "city": "gurgaon"},
+    {"query": "chief of staff jobs Mumbai India",           "category": "cos",      "city": "mumbai"},
+    {"query": "growth manager D2C startup Gurgaon India",   "category": "growth",   "city": "gurgaon"},
+    {"query": "growth manager D2C startup Mumbai India",    "category": "growth",   "city": "mumbai"},
+    {"query": "strategy operations startup Gurgaon India",  "category": "strategy", "city": "gurgaon"},
+    {"query": "strategy operations startup Mumbai India",   "category": "strategy", "city": "mumbai"},
 ]
 
 NAUKRI_SEARCHES = [
@@ -36,13 +34,6 @@ NAUKRI_SEARCHES = [
     {"url": "https://www.naukri.com/chief-of-staff-jobs-in-mumbai",   "category": "cos",      "city": "mumbai"},
 ]
 
-LINKEDIN_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-}
 
 # ── Logging ────────────────────────────────────────────────────────────────
 def log(msg):
@@ -52,108 +43,77 @@ def log(msg):
     with open(LOG_FILE, "a") as f:
         f.write(line + "\n")
 
-# ── LinkedIn Scraper ────────────────────────────────────────────────────────
+# ── LinkedIn Scraper (via Google search using Firecrawl) ────────────────────
 def scrape_linkedin(search):
-    url = (
-        "https://www.linkedin.com/jobs/search/"
-        f"?keywords={requests.utils.quote(search['keywords'])}"
-        f"&location={requests.utils.quote(search['location'])}"
-        "&f_TPR=r86400"  # last 24 hours
-        "&position=1&pageNum=0"
-    )
+    """Search Google for site:linkedin.com/jobs listings and parse results."""
+    import urllib.parse as urlparse
+    q   = urlparse.quote(f'site:linkedin.com/jobs {search["query"]}')
+    url = f"https://www.google.com/search?q={q}&num=20&hl=en&gl=in"
     try:
-        resp = requests.get(url, headers=LINKEDIN_HEADERS, timeout=15)
-        resp.raise_for_status()
-        html = resp.text
+        resp = requests.post(
+            "https://api.firecrawl.dev/v1/scrape",
+            headers={"Authorization": f"Bearer {FIRECRAWL_API_KEY}", "Content-Type": "application/json"},
+            json={"url": url, "formats": ["markdown"], "onlyMainContent": True, "waitFor": 1000},
+            timeout=30,
+        )
+        data = resp.json()
+        if not data.get("success"):
+            log(f"  LinkedIn/Google error ({search['city']}): {data.get('error','')}")
+            return []
+        md = data["data"].get("markdown", "")
     except Exception as e:
-        log(f"  LinkedIn fetch error ({search['keywords']} / {search['location']}): {e}")
+        log(f"  LinkedIn/Google fetch error: {e}")
         return []
 
     jobs = []
+    city_label = search["city"].capitalize() + ", India"
 
-    # Extract job cards
-    # LinkedIn public pages embed job data as structured HTML
-    card_pattern = re.compile(
-        r'<div[^>]+class="[^"]*base-card[^"]*"[^>]*data-entity-urn="[^"]*"[^>]*>(.*?)</div>\s*</div>\s*</div>',
-        re.DOTALL
+    # Pattern 1: direct LinkedIn links — [Title](https://...linkedin.com/jobs/view/...)
+    direct_pat = re.compile(
+        r'\[([^\]]{5,120})\]\((https://(?:www\.|in\.)?linkedin\.com/jobs/view/[^\s\)]+)\)'
+    )
+    # Pattern 2: Google redirect containing LinkedIn URL
+    redirect_pat = re.compile(
+        r'\[([^\]]{5,120})\]\(/url\?[^)]*q=(https?://(?:www\.|in\.)?linkedin\.com/jobs/view/[^&\s\)]+)'
     )
 
-    title_pat   = re.compile(r'class="[^"]*base-search-card__title[^"]*"[^>]*>\s*(.*?)\s*</h3>', re.DOTALL)
-    company_pat = re.compile(r'class="[^"]*base-search-card__subtitle[^"]*"[^>]*>\s*<[^>]+>\s*(.*?)\s*</a>', re.DOTALL)
-    location_pat= re.compile(r'class="[^"]*job-search-card__location[^"]*"[^>]*>\s*(.*?)\s*</span>', re.DOTALL)
-    url_pat     = re.compile(r'href="(https://[a-z.]*linkedin\.com/jobs/view/[^"?]+)', re.DOTALL)
-    time_pat    = re.compile(r'<time[^>]+datetime="([^"]+)"[^>]*>\s*(.*?)\s*</time>', re.DOTALL)
+    seen_urls = set()
+    for pat in (direct_pat, redirect_pat):
+        for m in pat.finditer(md):
+            title   = clean(m.group(1))
+            job_url = m.group(2) if pat is direct_pat else urllib.parse.unquote(m.group(2))
+            if not title or job_url in seen_urls:
+                continue
+            skip = ["login","sign in","join","linkedin.com/company","linkedin.com/in/"]
+            if any(s in job_url.lower() or s in title.lower() for s in skip):
+                continue
+            seen_urls.add(job_url)
+            # Try to find company name on the line after the title
+            idx     = m.end()
+            snippet = md[idx:idx+200]
+            company_m = re.search(r'[·\|]\s*([A-Za-z][^\n·\|]{2,50}?)\s*[·\|]', snippet)
+            company   = clean(company_m.group(1)) if company_m else ""
+            posted_m  = re.search(r'(\d+\s+(?:day|week|hour|month)s?\s+ago)', snippet, re.IGNORECASE)
+            posted    = posted_m.group(1) if posted_m else "Today"
+            exp_date, days_left = calc_expiry(posted)
+            jobs.append({
+                "role":       title,
+                "company":    company,
+                "location":   city_label,
+                "city":       search["city"],
+                "category":   search["category"],
+                "posted":     posted,
+                "url":        job_url,
+                "salary":     None,
+                "exp":        "Not specified",
+                "tags":       infer_tags(title, company, search["category"]),
+                "fresh":      "day" in posted or "hour" in posted or posted == "Today",
+                "expires_on": exp_date,
+                "days_left":  days_left,
+                "source":     "linkedin",
+            })
 
-    # Try JSON-LD first
-    json_ld = re.findall(r'<script type="application/ld\+json">(.*?)</script>', html, re.DOTALL)
-    for blob in json_ld:
-        try:
-            data = json.loads(blob)
-            items = data if isinstance(data, list) else data.get("itemListElement", [])
-            for item in items:
-                job = item.get("item", item)
-                title    = job.get("title", "")
-                company  = ""
-                if isinstance(job.get("hiringOrganization"), dict):
-                    company = job["hiringOrganization"].get("name", "")
-                location = ""
-                if isinstance(job.get("jobLocation"), dict):
-                    addr = job["jobLocation"].get("address", {})
-                    location = addr.get("addressLocality", "") + ", " + addr.get("addressRegion", "")
-                    location = location.strip(", ")
-                job_url  = job.get("url", "")
-                posted   = job.get("datePosted", "")
-                if title and job_url:
-                    p = posted or "Today"
-                    exp_date, days_left = calc_expiry(p)
-                    jobs.append({
-                        "role":       clean(title),
-                        "company":    clean(company),
-                        "location":   clean(location) or search["location"].split(",")[0],
-                        "city":       search["city"],
-                        "category":   search["category"],
-                        "posted":     p,
-                        "url":        job_url,
-                        "salary":     None,
-                        "exp":        "Not specified",
-                        "tags":       infer_tags(title, company, search["category"]),
-                        "fresh":      True,
-                        "expires_on": exp_date,
-                        "days_left":  days_left,
-                        "source":     "linkedin",
-                    })
-        except Exception:
-            pass
-
-    # Fallback: parse HTML cards
-    if not jobs:
-        for m in re.finditer(
-            r'<li[^>]*class="[^"]*jobs-search__results-list[^"]*"[^>]*>.*?</li>',
-            html, re.DOTALL
-        ):
-            card = m.group(0)
-            t = title_pat.search(card)
-            c = company_pat.search(card)
-            lo = location_pat.search(card)
-            u = url_pat.search(card)
-            tm = time_pat.search(card)
-            if t and u:
-                jobs.append({
-                    "role":     clean(t.group(1)),
-                    "company":  clean(c.group(1)) if c else "",
-                    "location": clean(lo.group(1)) if lo else search["location"].split(",")[0],
-                    "city":     search["city"],
-                    "category": search["category"],
-                    "posted":   clean(tm.group(2)) if tm else "Today",
-                    "url":      u.group(1),
-                    "salary":   None,
-                    "exp":      "Not specified",
-                    "tags":     infer_tags(t.group(1), c.group(1) if c else "", search["category"]),
-                    "fresh":    True,
-                    "source":   "linkedin",
-                })
-
-    log(f"  LinkedIn: {len(jobs)} jobs — {search['keywords']} / {search['city']}")
+    log(f"  LinkedIn: {len(jobs)} jobs — {search['query'][:40]}")
     return jobs
 
 

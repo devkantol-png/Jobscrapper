@@ -95,6 +95,8 @@
     <button class="filter-btn" onclick="setFilter('gurgaon',this)">Gurgaon</button>
     <button class="filter-btn" onclick="setFilter('mumbai',this)">Mumbai</button>
     <button class="filter-btn" onclick="setFilter('d2c',this)">D2C</button>
+    <button class="filter-btn" onclick="setFilter('naukri',this)">📋 Naukri</button>
+    <button class="filter-btn" onclick="setFilter('linkedin',this)">🔵 LinkedIn</button>
     <span class="results-count" id="results-count">55 roles</span>
   </div>
 </div>
@@ -1018,9 +1020,11 @@ function filterJobs() {
   const filtered = JOBS.filter(j => {
     const mf = activeFilter === 'all'
       || j.category === activeFilter
-      || (activeFilter === 'gurgaon' && j.city === 'gurgaon')
-      || (activeFilter === 'mumbai'  && j.city === 'mumbai')
-      || (activeFilter === 'd2c'     && j.tags && j.tags.includes('d2c'));
+      || (activeFilter === 'gurgaon'  && j.city === 'gurgaon')
+      || (activeFilter === 'mumbai'   && j.city === 'mumbai')
+      || (activeFilter === 'd2c'      && j.tags && j.tags.includes('d2c'))
+      || (activeFilter === 'naukri'   && j.source === 'naukri')
+      || (activeFilter === 'linkedin' && j.source === 'linkedin');
     const ms = !q
       || j.role.toLowerCase().includes(q)
       || (j.company || '').toLowerCase().includes(q)

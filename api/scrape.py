@@ -25,6 +25,17 @@ NAUKRI_SEARCHES = [
     {"url": "https://www.naukri.com/growth-manager-jobs-in-mumbai",   "category": "growth",   "city": "mumbai"},
 ]
 
+LINKEDIN_SEARCHES = [
+    {"query": "founder office jobs Gurgaon India",         "category": "founders", "city": "gurgaon"},
+    {"query": "founder office jobs Mumbai India",          "category": "founders", "city": "mumbai"},
+    {"query": "chief of staff jobs Gurgaon India",         "category": "cos",      "city": "gurgaon"},
+    {"query": "chief of staff jobs Mumbai India",          "category": "cos",      "city": "mumbai"},
+    {"query": "growth manager D2C startup Gurgaon India",  "category": "growth",   "city": "gurgaon"},
+    {"query": "growth manager D2C startup Mumbai India",   "category": "growth",   "city": "mumbai"},
+    {"query": "strategy operations startup Gurgaon India", "category": "strategy", "city": "gurgaon"},
+    {"query": "strategy operations startup Mumbai India",  "category": "strategy", "city": "mumbai"},
+]
+
 def clean(s):
     return re.sub(r'\s+', ' ', s or "").strip()
 
@@ -66,6 +77,45 @@ def firecrawl_scrape(url):
             return json.loads(resp.read())
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+def parse_linkedin(search):
+    """Search Google for site:linkedin.com/jobs and parse results via Firecrawl."""
+    q   = urllib.parse.quote(f'site:linkedin.com/jobs {search["query"]}')
+    url = f"https://www.google.com/search?q={q}&num=20&hl=en&gl=in"
+    data = firecrawl_scrape(url)
+    if not data.get("success"):
+        return []
+    md = data.get("data", {}).get("markdown", "")
+    jobs = []
+    city_label = search["city"].capitalize() + ", India"
+    direct_pat   = re.compile(r'\[([^\]]{5,120})\]\((https://(?:www\.|in\.)?linkedin\.com/jobs/view/[^\s\)]+)\)')
+    redirect_pat = re.compile(r'\[([^\]]{5,120})\]\(/url\?[^)]*q=(https?://(?:www\.|in\.)?linkedin\.com/jobs/view/[^&\s\)]+)')
+    seen_urls = set()
+    for pat in (direct_pat, redirect_pat):
+        for m in pat.finditer(md):
+            title   = clean(m.group(1))
+            job_url = m.group(2) if pat is direct_pat else urllib.parse.unquote(m.group(2))
+            if not title or job_url in seen_urls:
+                continue
+            if any(s in job_url.lower() or s in title.lower() for s in ["login","sign in","join","linkedin.com/company","linkedin.com/in/"]):
+                continue
+            seen_urls.add(job_url)
+            snippet   = md[m.end():m.end()+200]
+            company_m = re.search(r'[·\|]\s*([A-Za-z][^\n·\|]{2,50}?)\s*[·\|]', snippet)
+            company   = clean(company_m.group(1)) if company_m else ""
+            posted_m  = re.search(r'(\d+\s+(?:day|week|hour|month)s?\s+ago)', snippet, re.IGNORECASE)
+            posted    = posted_m.group(1) if posted_m else "Today"
+            exp_date, days_left = calc_expiry(posted)
+            jobs.append({
+                "role": title, "company": company, "location": city_label,
+                "city": search["city"], "category": search["category"],
+                "posted": posted, "url": job_url, "salary": None,
+                "exp": "Not specified", "tags": infer_tags(title, company, search["category"]),
+                "fresh": "day" in posted or "hour" in posted or posted == "Today",
+                "expires_on": exp_date, "days_left": days_left, "source": "linkedin",
+            })
+    return jobs
+
 
 def parse_naukri(search):
     data = firecrawl_scrape(search["url"])
@@ -134,6 +184,8 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         scraped_at = datetime.utcnow().strftime("%d %b %Y, %I:%M %p UTC")
         all_jobs = []
+        for s in LINKEDIN_SEARCHES:
+            all_jobs.extend(parse_linkedin(s))
         for s in NAUKRI_SEARCHES:
             all_jobs.extend(parse_naukri(s))
         all_jobs = dedupe(all_jobs)

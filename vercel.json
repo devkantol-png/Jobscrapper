@@ -4,9 +4,5 @@
       "path": "/api/scrape",
       "schedule": "30 4 * * *"
     }
-  ],
-  "functions": {
-    "api/scrape.py": { "maxDuration": 60 },
-    "api/jobs.py":   { "maxDuration": 10 }
-  }
+  ]
 }

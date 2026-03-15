@@ -1,13 +1,14 @@
 """
-Vercel Serverless Function — POST /api/scrape
+Vercel Serverless Function — GET /api/scrape
 Called by Vercel Cron at 04:30 UTC (10:00 AM IST) every day.
-Scrapes Naukri via Firecrawl, stores JSON in Vercel KV, returns summary.
+Scrapes Naukri via Firecrawl, stores JSON in Upstash KV, returns summary.
 """
 
+from http.server import BaseHTTPRequestHandler
 import json
 import os
 import re
-import http.client
+import urllib.request
 import urllib.parse
 from datetime import datetime, timedelta
 
@@ -24,7 +25,6 @@ NAUKRI_SEARCHES = [
     {"url": "https://www.naukri.com/growth-manager-jobs-in-mumbai",   "category": "growth",   "city": "mumbai"},
 ]
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
 def clean(s):
     return re.sub(r'\s+', ' ', s or "").strip()
 
@@ -32,7 +32,7 @@ def calc_expiry(posted_str):
     today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     s = (posted_str or "").lower().strip()
     days_ago = 0
-    if m := re.search(r'(\d+)\s*day',   s): days_ago = int(m.group(1))
+    if m := re.search(r'(\d+)\s*day',    s): days_ago = int(m.group(1))
     elif m := re.search(r'(\d+)\s*week', s): days_ago = int(m.group(1)) * 7
     elif m := re.search(r'(\d+)\s*month',s): days_ago = int(m.group(1)) * 30
     elif "yesterday" in s: days_ago = 1
@@ -51,22 +51,14 @@ def infer_tags(role, company, category):
     tags.append("mnc" if any(b in text for b in big) else "startup")
     return list(set(tags))
 
-# ── Firecrawl scraper ─────────────────────────────────────────────────────────
 def firecrawl_scrape(url):
-    import urllib.request
     payload = json.dumps({
-        "url": url,
-        "formats": ["markdown"],
-        "onlyMainContent": True,
-        "waitFor": 2000
+        "url": url, "formats": ["markdown"],
+        "onlyMainContent": True, "waitFor": 2000
     }).encode()
     req = urllib.request.Request(
-        "https://api.firecrawl.dev/v1/scrape",
-        data=payload,
-        headers={
-            "Authorization": f"Bearer {FIRECRAWL_API_KEY}",
-            "Content-Type": "application/json"
-        },
+        "https://api.firecrawl.dev/v1/scrape", data=payload,
+        headers={"Authorization": f"Bearer {FIRECRAWL_API_KEY}", "Content-Type": "application/json"},
         method="POST"
     )
     try:
@@ -90,30 +82,25 @@ def parse_naukri(search):
         if not lm: continue
         title = clean(lm.group(1))
         url   = lm.group(2)
-        skip  = ["login","register","naukri","buy online","employer"]
-        if any(w in title.lower() for w in skip): continue
-        salary  = salary_pat.search(block)
-        exp     = exp_pat.search(block)
+        if any(w in title.lower() for w in ["login","register","naukri","buy online","employer"]): continue
+        salary    = salary_pat.search(block)
+        exp       = exp_pat.search(block)
         company_m = re.search(r'\n\[([^\]]+)\]\(https://www\.naukri\.com/[^)]*-jobs-careers', block)
-        company = clean(company_m.group(1)) if company_m else ""
-        posted_m = re.search(r'(\d+\s+(?:day|week|hour|month)s?\s+ago)', block, re.IGNORECASE)
-        posted  = posted_m.group(1) if posted_m else "Today"
+        company   = clean(company_m.group(1)) if company_m else ""
+        posted_m  = re.search(r'(\d+\s+(?:day|week|hour|month)s?\s+ago)', block, re.IGNORECASE)
+        posted    = posted_m.group(1) if posted_m else "Today"
         exp_date, days_left = calc_expiry(posted)
         jobs.append({
-            "role":       title,
-            "company":    company,
-            "location":   search["city"].capitalize() + ", India",
-            "city":       search["city"],
-            "category":   search["category"],
-            "posted":     posted,
-            "url":        url if url.startswith("http") else "https://www.naukri.com" + url,
-            "salary":     clean(salary.group(1)) if salary else None,
-            "exp":        clean(exp.group(1)) if exp else "Not specified",
-            "tags":       infer_tags(title, company, search["category"]),
-            "fresh":      "day" in posted or "hour" in posted or "today" in posted.lower(),
-            "expires_on": exp_date,
-            "days_left":  days_left,
-            "source":     "naukri",
+            "role": title, "company": company,
+            "location": search["city"].capitalize() + ", India",
+            "city": search["city"], "category": search["category"],
+            "posted": posted,
+            "url": url if url.startswith("http") else "https://www.naukri.com" + url,
+            "salary": clean(salary.group(1)) if salary else None,
+            "exp": clean(exp.group(1)) if exp else "Not specified",
+            "tags": infer_tags(title, company, search["category"]),
+            "fresh": "day" in posted or "hour" in posted or "today" in posted.lower(),
+            "expires_on": exp_date, "days_left": days_left, "source": "naukri",
         })
     return jobs
 
@@ -126,20 +113,14 @@ def dedupe(jobs):
             out.append(j)
     return out
 
-# ── KV storage ───────────────────────────────────────────────────────────────
 def kv_set(key, value):
-    """Store value in Vercel KV via REST API."""
     if not KV_REST_API_URL or not KV_REST_API_TOKEN:
         return False
-    import urllib.request
-    url  = f"{KV_REST_API_URL}/set/{urllib.parse.quote(key)}"
     data = json.dumps(value).encode()
     req  = urllib.request.Request(
-        url, data=data,
-        headers={
-            "Authorization": f"Bearer {KV_REST_API_TOKEN}",
-            "Content-Type": "application/json"
-        },
+        f"{KV_REST_API_URL}/set/{urllib.parse.quote(key)}",
+        data=data,
+        headers={"Authorization": f"Bearer {KV_REST_API_TOKEN}", "Content-Type": "application/json"},
         method="POST"
     )
     try:
@@ -148,30 +129,21 @@ def kv_set(key, value):
     except Exception:
         return False
 
-# ── Vercel handler ────────────────────────────────────────────────────────────
-def handler(request, response):
-    # Only allow GET (cron) or POST
-    scraped_at = datetime.utcnow().strftime("%d %b %Y, %I:%M %p UTC")
-    all_jobs = []
 
-    for s in NAUKRI_SEARCHES:
-        all_jobs.extend(parse_naukri(s))
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        scraped_at = datetime.utcnow().strftime("%d %b %Y, %I:%M %p UTC")
+        all_jobs = []
+        for s in NAUKRI_SEARCHES:
+            all_jobs.extend(parse_naukri(s))
+        all_jobs = dedupe(all_jobs)
+        payload  = {"scraped_at": scraped_at, "count": len(all_jobs), "jobs": all_jobs}
+        kv_set("jobs_data", payload)
+        body = json.dumps({"ok": True, "scraped_at": scraped_at, "count": len(all_jobs)}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(body)
 
-    all_jobs = dedupe(all_jobs)
-
-    payload = {
-        "scraped_at": scraped_at,
-        "count":      len(all_jobs),
-        "jobs":       all_jobs
-    }
-
-    # Try to persist to Vercel KV
-    kv_set("jobs_data", payload)
-
-    response.status_code = 200
-    response.headers["Content-Type"] = "application/json"
-    response.write(json.dumps({
-        "ok":         True,
-        "scraped_at": scraped_at,
-        "count":      len(all_jobs)
-    }))
+    def do_POST(self):
+        self.do_GET()

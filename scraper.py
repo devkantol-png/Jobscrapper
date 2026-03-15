@@ -63,34 +63,67 @@ def scrape_linkedin(search):
         log(f"  LinkedIn search fetch error: {e}")
         return []
 
-    jobs      = []
+    jobs       = []
     city_label = search["city"].capitalize() + ", India"
-    li_pat    = re.compile(r'https://(?:www\.|in\.)?linkedin\.com/jobs/view/', re.IGNORECASE)
-    seen_urls = set()
+    city_key   = search["city"].lower()
+    city_aliases = {
+        "gurgaon": ["gurgaon", "gurugram", "delhi ncr", "delhi", "ncr"],
+        "mumbai":  ["mumbai", "bombay", "navi mumbai", "thane"],
+    }
+    ok_cities    = city_aliases.get(city_key, [city_key])
+    other_cities = ["bangalore", "bengaluru", "hyderabad", "pune", "chennai",
+                    "kolkata", "ahmedabad", "noida", "faridabad", "chandigarh"]
+    li_pat     = re.compile(r'https://(?:www\.|in\.)?linkedin\.com/jobs/view/', re.IGNORECASE)
+    seen_urls  = set()
 
     for result in results:
         job_url = result.get("url", "")
         if not li_pat.search(job_url) or job_url in seen_urls:
             continue
         seen_urls.add(job_url)
-        title     = clean(result.get("title", ""))
+
+        raw_title = result.get("title", "")
         desc      = result.get("description", "")
-        company_m = re.search(r'(?:at|@)\s+([A-Za-z][^\n·|]{2,50}?)(?:\s+in\b|\s*[·|]|\s*$)', desc)
-        company   = clean(company_m.group(1)) if company_m else ""
+        combined  = (raw_title + " " + desc).lower()
+
+        # Skip if clearly belongs to another city
+        if not any(c in combined for c in ok_cities):
+            if any(c in combined for c in other_cities):
+                continue
+
+        # Extract role and company from "Role at Company | LinkedIn" title
+        at_m = re.search(r'^(.+?)\s+at\s+(.+?)(?:\s*\|\s*LinkedIn.*)?$', raw_title, re.IGNORECASE)
+        if at_m:
+            role    = clean(at_m.group(1))
+            company = clean(at_m.group(2))
+        else:
+            dash_m  = re.search(r'^(.+?)\s*[-–]\s*(.+?)(?:\s*\|\s*LinkedIn)?$', raw_title)
+            if dash_m:
+                role    = clean(dash_m.group(1))
+                company = clean(dash_m.group(2))
+            else:
+                role    = clean(re.sub(r'\s*\|\s*LinkedIn.*$', '', raw_title, flags=re.IGNORECASE))
+                company = ""
+
         posted_m  = re.search(r'(\d+\s+(?:day|week|hour|month)s?\s+ago)', desc, re.IGNORECASE)
         posted    = posted_m.group(1) if posted_m else "Today"
         exp_date, days_left = calc_expiry(posted)
+
+        # Skip expired postings
+        if days_left == 0:
+            continue
+
         jobs.append({
-            "role":       title,
+            "role":       role,
             "company":    company,
             "location":   city_label,
-            "city":       search["city"],
+            "city":       city_key,
             "category":   search["category"],
             "posted":     posted,
             "url":        job_url,
             "salary":     None,
             "exp":        "Not specified",
-            "tags":       infer_tags(title, company, search["category"]),
+            "tags":       infer_tags(role, company, search["category"]),
             "fresh":      "day" in posted or "hour" in posted or posted == "Today",
             "expires_on": exp_date,
             "days_left":  days_left,

@@ -4,5 +4,8 @@
       "path": "/api/scrape",
       "schedule": "30 4 * * *"
     }
+  ],
+  "redirects": [
+    { "source": "/", "destination": "/jobs.html", "permanent": false }
   ]
 }

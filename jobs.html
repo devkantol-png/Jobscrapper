@@ -1065,7 +1065,7 @@ function filterJobs() {
     // Hard rule: never show expired jobs
     if ((j.days_left ?? 99) <= 0) return false;
     // Recency gate
-    if (parseDaysAgo(j.posted) >= cutoff) return false;
+    if (parseDaysAgo(j.posted) > cutoff) return false;
     // Category / source / applied filter
     const mf = activeFilter === 'all'
       || j.category === activeFilter
@@ -1173,6 +1173,7 @@ async function boot() {
     if (!res.ok) throw new Error('API not ready');
     const data = await res.json();
     JOBS = data.jobs || [];
+    if (JOBS.length === 0) throw new Error('No jobs in API');
     if (data.scraped_at) {
       document.querySelector('.hero p').textContent =
         `Auto-scraped from Naukri · Last updated: ${data.scraped_at} · Gurgaon & Mumbai`;

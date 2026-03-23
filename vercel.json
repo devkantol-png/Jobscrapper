@@ -3,10 +3,6 @@
   "crons": [
     { "path": "/api/scrape", "schedule": "30 4 * * *" }
   ],
-  "functions": {
-    "api/scrape.py": { "maxDuration": 10 },
-    "api/jobs.py":   { "maxDuration": 10 }
-  },
   "redirects": [
     { "source": "/", "destination": "/jobs.html", "permanent": false }
   ]

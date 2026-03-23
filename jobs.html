@@ -1164,28 +1164,32 @@ function calcExpiry(posted) {
   return { expires_on, days_left: daysLeft };
 }
 
-// ── Boot: fetch from /api/jobs (Vercel) or fall back to embedded data ─────────
-async function boot() {
-  const grid = document.getElementById('job-grid');
-  grid.innerHTML = '<div class="empty"><p style="color:var(--muted)">Loading jobs...</p></div>';
-  try {
-    const res  = await fetch('/api/jobs');
-    if (!res.ok) throw new Error('API not ready');
-    const data = await res.json();
-    JOBS = data.jobs || [];
-    if (JOBS.length === 0) throw new Error('No jobs in API');
-    if (data.scraped_at) {
-      document.querySelector('.hero p').textContent =
-        `Auto-scraped from Naukri · Last updated: ${data.scraped_at} · Gurgaon & Mumbai`;
-    }
-  } catch {
-    // Running locally — enrich embedded jobs with calculated expiry
-    JOBS = EMBEDDED_JOBS.map(j => ({ ...j, ...calcExpiry(j.posted) }));
-  }
+// ── Boot: show embedded data immediately, then update from API if available ────
+function renderJobs() {
   const active = JOBS.filter(j => (j.days_left ?? 99) > 0);
   document.getElementById('total-count').textContent = active.length;
   document.getElementById('fresh-count').textContent = active.filter(j => parseDaysAgo(j.posted) === 0).length;
   filterJobs();
+}
+
+async function boot() {
+  // Always show embedded data first — no blank states
+  JOBS = EMBEDDED_JOBS.map(j => ({ ...j, ...calcExpiry(j.posted) }));
+  renderJobs();
+
+  // Then try to upgrade to live data in the background
+  try {
+    const res  = await fetch('/api/jobs');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.jobs || data.jobs.length === 0) return;
+    JOBS = data.jobs;
+    if (data.scraped_at) {
+      document.querySelector('.hero p').textContent =
+        `Auto-scraped from Naukri · Last updated: ${data.scraped_at} · Gurgaon & Mumbai`;
+    }
+    renderJobs();
+  } catch { /* keep embedded data */ }
 }
 
 boot();

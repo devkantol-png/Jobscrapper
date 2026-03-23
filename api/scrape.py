@@ -1,7 +1,7 @@
 """
 Vercel Serverless Function — GET /api/scrape
 Called by Vercel Cron at 04:30 UTC (10:00 AM IST) every day.
-Scrapes Naukri via Firecrawl, stores JSON in Upstash KV, returns summary.
+Scrapes Naukri via Jina Reader, LinkedIn via Jina Search (both free, no API key).
 """
 
 from http.server import BaseHTTPRequestHandler
@@ -12,7 +12,6 @@ import urllib.request
 import urllib.parse
 from datetime import datetime, timedelta
 
-FIRECRAWL_API_KEY = os.environ.get("FIRECRAWL_API_KEY", "fc-24085ca9f4194d70abeefe9e6606fcd0")
 KV_REST_API_URL   = os.environ.get("KV_REST_API_URL", "")
 KV_REST_API_TOKEN = os.environ.get("KV_REST_API_TOKEN", "")
 
@@ -62,45 +61,46 @@ def infer_tags(role, company, category):
     tags.append("mnc" if any(b in text for b in big) else "startup")
     return list(set(tags))
 
-def firecrawl_scrape(url):
-    payload = json.dumps({
-        "url": url, "formats": ["markdown"],
-        "onlyMainContent": True, "waitFor": 2000
-    }).encode()
+def jina_scrape(url):
+    """Fetch a page as markdown via Jina Reader (free, no API key needed)."""
     req = urllib.request.Request(
-        "https://api.firecrawl.dev/v1/scrape", data=payload,
-        headers={"Authorization": f"Bearer {FIRECRAWL_API_KEY}", "Content-Type": "application/json"},
-        method="POST"
+        f"https://r.jina.ai/{urllib.parse.quote(url, safe=':/?=&')}",
+        headers={"Accept": "application/json", "X-Return-Format": "markdown"},
+        method="GET"
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
-            return json.loads(resp.read())
+            body = json.loads(resp.read())
+            markdown = body.get("data", {}).get("content", "")
+            return {"success": bool(markdown), "data": {"markdown": markdown}}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-def firecrawl_search(query, num=10):
-    """Use Firecrawl's native search API — more reliable than scraping Google."""
-    payload = json.dumps({
-        "query": query,
-        "limit": num,
-        "lang": "en",
-        "country": "in",
-    }).encode()
+def jina_search(query, num=10):
+    """Search the web via Jina Search (free, no API key needed)."""
     req = urllib.request.Request(
-        "https://api.firecrawl.dev/v1/search", data=payload,
-        headers={"Authorization": f"Bearer {FIRECRAWL_API_KEY}", "Content-Type": "application/json"},
-        method="POST"
+        f"https://s.jina.ai/{urllib.parse.quote(query)}",
+        headers={"Accept": "application/json"},
+        method="GET"
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
-            return json.loads(resp.read())
+            body = json.loads(resp.read())
+            results = body.get("data", [])[:num]
+            return {
+                "success": True,
+                "data": [
+                    {"url": r.get("url", ""), "title": r.get("title", ""), "description": r.get("description", "")}
+                    for r in results
+                ]
+            }
     except Exception as e:
         return {"success": False, "error": str(e)}
 
 def parse_linkedin(search):
-    """Use Firecrawl search API to find LinkedIn job listings."""
+    """Use Jina Search to find LinkedIn job listings."""
     query = f'site:linkedin.com/jobs {search["query"]}'
-    data  = firecrawl_search(query, num=10)
+    data  = jina_search(query, num=10)
     if not data.get("success"):
         return []
     results    = data.get("data", [])
@@ -183,7 +183,7 @@ def parse_linkedin(search):
 
 
 def parse_naukri(search):
-    data = firecrawl_scrape(search["url"])
+    data = jina_scrape(search["url"])
     if not data.get("success"):
         return []
     md = data.get("data", {}).get("markdown", "")
